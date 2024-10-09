@@ -1,0 +1,84 @@
+
+QMainWindow {
+	background-color : #282828;
+	color : #ffffff;
+	font-size : 15px;
+	font-family : Firecode;
+
+}
+
+QDialog {
+	background-color : #313131;
+	color : #ffffff;
+	font-size : 15px;
+	font-family : Firecode;
+
+}
+
+QWebEngineView {
+	background-color : #313131;
+	color : #ffffff;
+	font-size : 15px;
+	font-family : Firecode;
+
+}
+
+QVBoxLayout{
+	background-color: #3f3f3f;
+	color: #121212
+}
+
+QHBoxLayout{
+	background-color: #3f3f3f;
+	color: #121212
+}
+
+QLabel {
+	background-color : #313131;
+	color : #ffffff;
+	font-size : 15px;
+	font-family : Firecode;
+	
+}
+
+QPushButton {
+	background-color : #282828;
+	color : #121212;
+	font-size : 15px;
+	font-family : Firecode;
+	border-radius: 20px;
+}
+
+QPushButton:hover {
+	background-color : #717171;
+	color : #ffffff;
+	font-size : 15px;
+	font-family : Firecode;
+	border-radius: 20px;
+}
+
+QComboBox {
+	background-color : #212121;
+	color : #ffffff;
+	font-size : 13px;
+	font-family : Firecode;
+	border-radius: 20px;
+}
+
+QSpinBox {
+	background-color : #212121;
+	color : #ffffff;
+	font-size : 13px;
+	font-family : Firecode;
+	border-radius: 20px;
+}
+
+QLineEdit {
+	background-color : #121212;
+	color : #ffffff;
+	font-size : 12px;
+	font-family : Airial;
+	
+}
+
+
