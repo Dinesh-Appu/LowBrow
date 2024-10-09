@@ -1,5 +1,4 @@
- Hi this is test message for my project
 
- Welcome to LowBrow 
+----------------------- Welcome to LowBrow ------------------------
 
 
