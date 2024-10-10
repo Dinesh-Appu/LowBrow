@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import ( QApplication, QMainWindow,
+from PyQt5.QtWidgets import ( QApplication, QMainWindow, QFileDialog,
 							QWidget, QHBoxLayout, QVBoxLayout,
-							QLabel, QLineEdit, QPushButton, 
+							QLabel, QLineEdit, QPushButton
 							)
-from PyQt5.QtCore import Qt, QUrl, QSize
+from PyQt5.QtCore import Qt, QUrl, QSize, QDir, QFileInfo 
 from PyQt5.QtGui import QKeySequence, QIcon, QColor
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
 
 import PyQt5.QtCore as QtCore
 
@@ -59,13 +59,18 @@ class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
+		# Default Variables
+		self.file_style_main = "./src/styles/style_sheet_main.qcc"
+		self.file_database = "./src/database.db"
+		self.default_path = "G:/Python/Files/PyQt5/test/temp/"
+		self.default_page : str = "https://feathericons.com/?query=arrow"
+		self.default_backgroud_color = "#282828"
+
+
 		self.setWindowTitle("LowBrow")
 		self.resize(900, 600)
 		self.style_sheet()
 
-		self.default_path = "G:/Python/Files/PyQt5/test/temp/"
-		self.default_page : str = "https://feathericons.com/?query=arrow"
-		self.default_backgroud_color = "#282828"
 		#"https://www.youtube.com/watch?v=AiD6SOOBKZI"
 		#"https://www.youtube.com/watch?v=IZHGcU0U_W0"
 		#"file:///G:/Python/Files/PyQt5/test/temp/roadmap_python.mp4"
@@ -94,7 +99,7 @@ class MainWindow(QMainWindow):
 		self.browser = QWebEngineView()
 
 		self.settings_browser = QWebEngineSettings.globalSettings()
-		self.other = Other()
+		self.other = Other(self)
 		self.history = self.other.get_data("history")
 		# Main UI Setup
 		self.initUI()
@@ -137,16 +142,16 @@ class MainWindow(QMainWindow):
 		self.btn_go.setShortcut(QKeySequence( Qt.Key_Enter))
 
 		# Set Icons
-		self.btn_back.setIcon(QIcon("./temp/icon/chevron-left_white.svg"))
-		self.btn_forward.setIcon(QIcon("./temp/icon/chevron-right_white.svg"))
-		self.btn_go.setIcon(QIcon("./temp/icon/search_white.svg"))
-		self.btn_refresh.setIcon(QIcon("./temp/icon/refresh-cw_white.svg"))
-		self.btn_bookmark.setIcon(QIcon("./temp/icon/bookmark.whitesvg.svg"))
-		self.btn_menu.setIcon(QIcon("./temp/icon/menu_white.svg"))
-		self.btn_home.setIcon(QIcon("./temp/icon/home_white.svg"))
-		self.btn_settings.setIcon(QIcon("./temp/icon/settings_white.svg"))
-		self.btn_download.setIcon(QIcon("./temp/icon/download_white.svg"))
-		self.browser_icon.setIcon(QIcon("./temp/icon/globe_white.svg"))
+		self.btn_back.setIcon(QIcon("./src/icon/chevron-left_white.svg"))
+		self.btn_forward.setIcon(QIcon("./src/icon/chevron-right_white.svg"))
+		self.btn_go.setIcon(QIcon("./src/icon/search_white.svg"))
+		self.btn_refresh.setIcon(QIcon("./src/icon/refresh-cw_white.svg"))
+		self.btn_bookmark.setIcon(QIcon("./src/icon/bookmark.whitesvg.svg"))
+		self.btn_menu.setIcon(QIcon("./src/icon/menu_white.svg"))
+		self.btn_home.setIcon(QIcon("./src/icon/home_white.svg"))
+		self.btn_settings.setIcon(QIcon("./src/icon/settings_white.svg"))
+		self.btn_download.setIcon(QIcon("./src/icon/download_white.svg"))
+		self.browser_icon.setIcon(QIcon("./src/icon/globe_white.svg"))
 
 		# Set Icon Size 
 		self.browser_icon.setIconSize(QSize(20, 20))
@@ -178,7 +183,7 @@ class MainWindow(QMainWindow):
 		#self.browser.createWindow.connect(self.new_tab)
 
 		self.browser.page().fullScreenRequested.connect(self.full_screen_req)
-		#self.browser.page().downloadRequested.connect(self.download_file)
+		QWebEngineProfile.defaultProfile().downloadRequested.connect(self.download_file)
 
 
 		#self.hbox_top.setAlignment(Qt.AlignTop)
@@ -199,6 +204,8 @@ class MainWindow(QMainWindow):
 
 		self.load_url()
 
+	def main_icon(self):
+		print("\nIcon Url >>>>",self.browser.page().iconUrl())
 
 	def update_window(self):
 		self.setWindowTitle(self.browser.page().title())
@@ -226,11 +233,11 @@ class MainWindow(QMainWindow):
 
 	def url_loading(self):
 		self.loading = True
-		self.btn_refresh.setIcon(QIcon("./temp/icon/cancel_x_white.svg"))
+		self.btn_refresh.setIcon(QIcon("./src/icon/cancel_x_white.svg"))
 
 	def url_loaded(self):
 		self.loading = False
-		self.btn_refresh.setIcon(QIcon("./temp/icon/refresh-cw_white.svg"))
+		self.btn_refresh.setIcon(QIcon("./src/icon/refresh-cw_white.svg"))
 		self.update_window()
 
 		print(f"\n Title >>>> {self.browser.page().title()} \n")
@@ -239,7 +246,6 @@ class MainWindow(QMainWindow):
 		self.browser_icon.setIcon(self.browser.page().icon())
 		print("###### back Color -----> ",self.browser.page().backgroundColor())
 		self.browser.page().setBackgroundColor(QColor(self.default_backgroud_color))
-		self.download_file()
 
 	def url_refresh_stop_stop(self):
 		if self.loading:
@@ -261,11 +267,37 @@ class MainWindow(QMainWindow):
 		book = self.other.get_data("bookmark")
 		print("get bookmark >>>>> ", book)
 
-	def download_file(self):
+	
+	def download_file(self, download:QWebEngineDownloadItem):
 		filename = self.default_path+str(datetime.datetime.now().timestamp()).replace(".","")
-		self.browser.page().download(self.browser.url(), f"{filename}.txt")
-		print(f"downloadig... {filename}.txt")
+		#self.browser.page().download(self.browser.url(), f"{filename}.txt")
+		print(f"downloadig... {self} >>>{filename}.txt")
 
+		assert download and download.state() == QWebEngineDownloadItem.DownloadRequested
+		path, _ = QFileDialog.getSaveFileName(self, "Save as", QDir(download.downloadDirectory()).filePath(download.downloadFileName()))
+        # Prompt the user for a file name
+		print(f"Path {type(path)}>>>>>> {path}")
+		if path == None:
+			return
+
+		# Set download directory and file name
+		download.setDownloadDirectory(QFileInfo(path).path())
+		download.setDownloadFileName(QFileInfo(path).fileName())
+		download.accept()
+        
+        # Add the download to the download manager
+
+		print(f"\n DownloadRequested <<<<< {download} \n")
+		#self.add(DownloadWidget(download)) 
+
+        # Show the download manager 
+		#QWidget.show()
+
+        
+        
+		
+
+        
 	def new_window(self):
 		new = MainWindow()
 		new.browser.setUrl(self.browser.url())
@@ -288,7 +320,7 @@ class MainWindow(QMainWindow):
 
 	def style_sheet(self):
 		try:
-			with open("./temp/style_sheet_wb.qcc", 'r') as f:
+			with open(self.file_style_main, 'r') as f:
 				self.setStyleSheet(f.read())
 				f.close()
 		except FileNotFoundError as e:
@@ -297,10 +329,12 @@ class MainWindow(QMainWindow):
 
 class Other():
 
-	def __init__(self):
+	def __init__(self,main:MainWindow):
 		super().__init__()
+		
 
-		self.db = sqlite3.connect("./temp/Web_browser.db")
+
+		self.db = sqlite3.connect(main.file_database)
 
 		self.cursor = self.db.cursor()
 
