@@ -60,9 +60,11 @@ class MainWindow(QMainWindow):
 		super().__init__()
 
 		# Default Variables
+		self.ask_download = True
 		self.file_style_main = "./src/styles/style_sheet_main.qcc"
 		self.file_database = "./src/database.db"
-		self.default_path = "G:/Python/Files/PyQt5/test/temp/"
+		self.default_path = "C:/Users/Welcome/Downloads/"
+		self.current_path = "C:/Users/Welcome/Downloads/"
 		self.default_page : str = "https://feathericons.com/?query=arrow"
 		self.default_backgroud_color = "#282828"
 
@@ -268,33 +270,45 @@ class MainWindow(QMainWindow):
 		print("get bookmark >>>>> ", book)
 
 	
-	def download_file(self, download:QWebEngineDownloadItem):
-		filename = self.default_path+str(datetime.datetime.now().timestamp()).replace(".","")
-		#self.browser.page().download(self.browser.url(), f"{filename}.txt")
-		print(f"downloadig... {self} >>>{filename}.txt")
+	def download_file(self, downlaod : QWebEngineDownloadItem):
 
-		assert download and download.state() == QWebEngineDownloadItem.DownloadRequested
-		path, _ = QFileDialog.getSaveFileName(self, "Save as", QDir(download.downloadDirectory()).filePath(download.downloadFileName()))
-        # Prompt the user for a file name
-		print(f"Path {type(path)}>>>>>> {path}")
+		# Ask Before Download On
+		if self.ask_download:
+			# Ask where to save file
+			path, _ = QFileDialog.getSaveFileName(self, "Save as", self.current_path+downlaod.downloadFileName())
+
+		# Ask Before Download Off
+		else:
+			# Save that on default path ex : C:/Users/Welcome/Downloads/ + ex.txt
+			path = self.default_path+str(downlaod.downloadFileName())
+		# Download Path is Null
 		if path == None:
 			return
 
-		# Set download directory and file name
-		download.setDownloadDirectory(QFileInfo(path).path())
-		download.setDownloadFileName(QFileInfo(path).fileName())
-		download.accept()
-        
-        # Add the download to the download manager
+		# Set Download File Details
+		downlaod.setDownloadFileName(QFileInfo(path).fileName())
+		self.current_path = QFileInfo(path).path()+"/"
+		downlaod.setDownloadDirectory(QFileInfo(path).path())
 
-		print(f"\n DownloadRequested <<<<< {download} \n")
-		#self.add(DownloadWidget(download)) 
-
-        # Show the download manager 
-		#QWidget.show()
-
+		print(f"\n filesize = {downlaod.totalBytes()} default_path = {self.current_path} filetype = {downlaod.type()}\n")
+		# Start Downloading File
+		downlaod.accept()
+		# Show Download Progress Signal
+		downlaod.downloadProgress.connect(self.downlaod_progress)
         
-        
+
+	def downlaod_progress(self, recv_byte, total_byte):
+		
+		print(f"n Download Progress {int(recv_byte/1024)} Kb/{int(total_byte/1024)} Kb")
+		"""# bytes to Mb
+		if int(total_byte/1024) > 1024:
+			print("is Mb") 
+			recv_byte = int((recv_byte/1024)/1024)
+			total_byte= int((total_byte/1024)/1024)
+		else:
+			print("is Kb")
+			recv_byte = int(recv_byte/1024)
+			total_byte= int(total_byte/1024) """
 		
 
         
