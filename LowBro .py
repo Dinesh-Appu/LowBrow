@@ -15,7 +15,7 @@ import datetime
 
 
 """    Todo:
-			1.file download
+			1.show downloads
 			2.show history
 			3.show menu
 			4.show bookmark 
@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
 		self.file_database = "./src/database.db"
 		self.default_path = "C:/Users/Welcome/Downloads/"
 		self.current_path = "C:/Users/Welcome/Downloads/"
-		self.default_page : str = "https://feathericons.com/?query=arrow"
+		self.default_page : str = "https://feathericons.com/?query="
 		self.default_backgroud_color = "#282828"
 
 
@@ -177,7 +177,7 @@ class MainWindow(QMainWindow):
 		self.btn_refresh.clicked.connect(self.url_refresh_stop_stop)
 		self.btn_bookmark.clicked.connect(self.add_bookmark)
 		self.btn_menu.clicked.connect(self.show_menu)
-		self.btn_download.clicked.connect(self.new_window)
+		self.btn_download.clicked.connect(self.show_downloads)
 
 		self.browser.urlChanged.connect(self.url_changed)
 		self.browser.loadStarted.connect(self.url_loading)
@@ -282,7 +282,7 @@ class MainWindow(QMainWindow):
 			# Save that on default path ex : C:/Users/Welcome/Downloads/ + ex.txt
 			path = self.default_path+str(downlaod.downloadFileName())
 		# Download Path is Null
-		if path == None:
+		if path == "":
 			return
 
 		# Set Download File Details
@@ -293,11 +293,12 @@ class MainWindow(QMainWindow):
 		print(f"\n filesize = {downlaod.totalBytes()} default_path = {self.current_path} filetype = {downlaod.type()}\n")
 		# Start Downloading File
 		downlaod.accept()
+		print(" add download ===>",self.other.add_download(downlaod.url().toString(), path, int(datetime.datetime.now().timestamp()), "started", 0, 0))
 		# Show Download Progress Signal
-		downlaod.downloadProgress.connect(self.downlaod_progress)
+		downlaod.downloadProgress.connect(self.download_progress)
         
 
-	def downlaod_progress(self, recv_byte, total_byte):
+	def download_progress(self, recv_byte, total_byte):
 		
 		print(f"n Download Progress {int(recv_byte/1024)} Kb/{int(total_byte/1024)} Kb")
 		"""# bytes to Mb
@@ -310,7 +311,11 @@ class MainWindow(QMainWindow):
 			recv_byte = int(recv_byte/1024)
 			total_byte= int(total_byte/1024) """
 		
+	def show_downloads(self):
+		downloads = self.other.get_data("downloads")
 
+		for downlaod in downloads:
+			print(downlaod)
         
 	def new_window(self):
 		new = MainWindow()
@@ -345,23 +350,32 @@ class Other():
 
 	def __init__(self,main:MainWindow):
 		super().__init__()
-		
-
-
+		# Default Variable
 		self.db = sqlite3.connect(main.file_database)
-
 		self.cursor = self.db.cursor()
 
+		# Create History Table  
 		self.cursor.execute(""" CREATE TABLE IF NOT EXISTS history (
 								id INTEGER PRIMARY KEY AUTOINCREMENT, 
 								url STRING NOT NULL, 
 								time_ids TIMESTAMP NOT NULL)
 		""")
 
+		# Create Bookmark Table  
 		self.cursor.execute(""" CREATE TABLE IF NOT EXISTS bookmark (
 								id INTEGER PRIMARY KEY AUTOINCREMENT,
 								url STRING NOT NULL UNIQUE
 								) """)
+		# Create Downloads Table 
+		self.cursor.execute(""" CREATE TABLE IF NOT EXISTS downloads (
+								id INTEGER PRIMARY KEY AUTOINCREMENT, 
+								url STRING NOT NULL, 
+								path STRING NOT NULL UNIQUE,
+								time TIMESTAMP NOT NULL,
+								state STRING DEFAULT "progress",
+								t_size int DEFAULT 0,
+								c_size int DEFAULT 0 )
+		""")
 
 
 		#self.cursor.execute(""" DROP TABLE  history""")
@@ -375,6 +389,15 @@ class Other():
 			return "Success"
 		except Exception as e:
 			return str(e)
+
+	def add_download(self, url: str, path: str, time, state: str, total_size:int, current_size: int) -> str:
+		try:
+			self.cursor.execute(""" INSERT INTO downloads (url, path, state, time, t_size, c_size) 
+								VALUES ("{}", "{}", "{}", {}, {}, {})""".format(url, path, state, time, total_size, current_size))
+			return "Success"
+		except Exception as e:
+			return str(e)
+
 
 	def add_data(self, tabel_name, url : str  ) -> str :
 		try:
