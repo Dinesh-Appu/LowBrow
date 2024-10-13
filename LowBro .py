@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import ( QApplication, QMainWindow, QFileDialog,
 							QWidget, QHBoxLayout, QVBoxLayout,
-							QLabel, QLineEdit, QPushButton
+							QLabel, QLineEdit, QPushButton, QMenu
 							)
-from PyQt5.QtCore import Qt, QUrl, QSize, QDir, QFileInfo 
-from PyQt5.QtGui import QKeySequence, QIcon, QColor
+from PyQt5.QtCore import Qt, QUrl, QSize, QDir, QFileInfo
+from PyQt5.QtGui import QKeySequence, QIcon, QColor, QContextMenuEvent
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
 
 import PyQt5.QtCore as QtCore
@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
 		self.default_path = "C:/Users/Welcome/Downloads/"
 		self.current_path = "C:/Users/Welcome/Downloads/"
 		self.default_page : str = "https://feathericons.com/?query="
+		self.default_page : QUrl = QUrl(self.default_page)
 		self.default_backgroud_color = "#282828"
 
 
@@ -75,6 +76,7 @@ class MainWindow(QMainWindow):
 
 		#"https://www.youtube.com/watch?v=AiD6SOOBKZI"
 		#"https://www.youtube.com/watch?v=IZHGcU0U_W0"
+		#"https://feathericons.com/?query="
 		#"file:///G:/Python/Files/PyQt5/test/temp/roadmap_python.mp4"
 		#"www.google.com"
 		#"file:///G:/Python/Files/PyQt5/test/temp/web/New%20Tab.htm"
@@ -93,24 +95,51 @@ class MainWindow(QMainWindow):
 		self.spacer_home_to_edit = QPushButton()
 		self.spacer_book_to_download = QPushButton()
 
+		# Menus
+		self.context_menu = QMenu()
+		# Actions
+		self.action_copy = self.context_menu.addAction("Copy")
+		self.action_save_as = self.context_menu.addAction("Save as")
+		self.action_new_window = self.context_menu.addAction("Open new Window")
+		self.action_new_tab = self.context_menu.addAction("Open New Tab")
+		self.action_quit = self.context_menu.addAction("Quit")
+
 		self.edit_url = QLineEdit()
 
 		self.hbox_top = QHBoxLayout()
 		self.vbox = QVBoxLayout()
 
-		self.browser = QWebEngineView()
-
+		self.browser = Browser()
+		
 		self.settings_browser = QWebEngineSettings.globalSettings()
 		self.other = Other(self)
 		self.history = self.other.get_data("history")
 		# Main UI Setup
 		self.initUI()
 
-
 	def initUI(self):
 		self.main_centeral_widget = QWidget()
 		self.setCentralWidget(self.main_centeral_widget)
 
+		# Action Shortcuts
+		self.action_copy.setShortcut("ctrl+c")
+		self.action_save_as.setShortcut('ctrl+s')
+		self.action_new_tab.setShortcut('ctrl+t')
+		self.action_new_window.setShortcut('Ctrl+n')
+		self.action_quit.setShortcut('ctrl+q')
+
+		self.context_menu.setStyleSheet("""
+				QMenu{
+					background-color: #212121;
+					color: #ffffff;
+					font-family: arial;
+					padding : 3px;
+					}
+				QMenu:chunk {
+				background-color : #515151;
+
+				}
+				""")
 		
 		#print(self.settings_browser.getAttribute())
 		# Disable Spacer
@@ -178,11 +207,17 @@ class MainWindow(QMainWindow):
 		self.btn_bookmark.clicked.connect(self.add_bookmark)
 		self.btn_menu.clicked.connect(self.show_menu)
 		self.btn_download.clicked.connect(self.show_downloads)
+		# Action Clicked Signal
+		self.action_quit.triggered.connect(sys.exit)
+		self.action_copy.triggered.connect(self.coping_text)
+		self.action_new_window.triggered.connect(self.new_window)
+
+		self.browser.context_menu = self.context_menu
 
 		self.browser.urlChanged.connect(self.url_changed)
 		self.browser.loadStarted.connect(self.url_loading)
 		self.browser.loadFinished.connect(self.url_loaded)
-		#self.browser.createWindow.connect(self.new_tab)
+		self.browser.page().linkHovered.connect(self.link_selected)
 
 		self.browser.page().fullScreenRequested.connect(self.full_screen_req)
 		QWebEngineProfile.defaultProfile().downloadRequested.connect(self.download_file)
@@ -206,8 +241,8 @@ class MainWindow(QMainWindow):
 
 		self.load_url()
 
-	def main_icon(self):
-		print("\nIcon Url >>>>",self.browser.page().iconUrl())
+	def main_icon(self, url: QUrl = QUrl("www.google.com")):
+		print("\n{url}  Icon Url >>>>",self.browser.page().iconUrl())
 
 	def update_window(self):
 		self.setWindowTitle(self.browser.page().title())
@@ -234,10 +269,12 @@ class MainWindow(QMainWindow):
 		self.browser.setUrl(q_url)
 
 	def url_loading(self):
+		print("loading....")
 		self.loading = True
 		self.btn_refresh.setIcon(QIcon("./src/icon/cancel_x_white.svg"))
 
 	def url_loaded(self):
+		print("loaded")
 		self.loading = False
 		self.btn_refresh.setIcon(QIcon("./src/icon/refresh-cw_white.svg"))
 		self.update_window()
@@ -266,8 +303,9 @@ class MainWindow(QMainWindow):
 			print("add_bookmark >>>> ", value)
 
 	def show_menu(self):
+		self.req_url = self.browser.page().requestedUrl()
 		book = self.other.get_data("bookmark")
-		print("get bookmark >>>>> ", book)
+		print(f"get {self.req_url} bookmark >>>>> ", book)
 
 	
 	def download_file(self, downlaod : QWebEngineDownloadItem):
@@ -300,12 +338,12 @@ class MainWindow(QMainWindow):
 
 	def download_progress(self, recv_byte, total_byte):
 		
-		print(f"n Download Progress {int(recv_byte/1024)} Kb/{int(total_byte/1024)} Kb")
+		recv_byte = int((recv_byte/1024)/1024)
+		total_byte= int((total_byte/1024)/1024)
+		print(f"n Download Progress {recv_byte} Kb/{total_byte} Kb")
 		"""# bytes to Mb
 		if int(total_byte/1024) > 1024:
 			print("is Mb") 
-			recv_byte = int((recv_byte/1024)/1024)
-			total_byte= int((total_byte/1024)/1024)
 		else:
 			print("is Kb")
 			recv_byte = int(recv_byte/1024)
@@ -316,10 +354,22 @@ class MainWindow(QMainWindow):
 
 		for downlaod in downloads:
 			print(downlaod)
+
+	def coping_text(self):
+		text = self.browser.page().selectedText()
+		print(f" {text} Coped:")
+
+	def link_selected(self, url):
+		print(f"Link Selected ---> _{url}_")
+		self.req_url = QUrl(url)
         
 	def new_window(self):
 		new = MainWindow()
-		new.browser.setUrl(self.browser.url())
+		print(f"request ===> {self.req_url}")
+		if not str(self.req_url) == "PyQt5.QtCore.QUrl('')":
+			new.browser.setUrl(self.req_url)
+		else:
+			new.browser.setUrl(self.browser.page().requestedUrl())
 		new.show()
 
 	@QtCore.pyqtSlot("QWebEngineFullScreenRequest")
@@ -344,6 +394,19 @@ class MainWindow(QMainWindow):
 				f.close()
 		except FileNotFoundError as e:
 			print(e)
+
+class Browser(QWebEngineView):
+	def __init__(self):
+		super().__init__()
+		self.setStyleSheet("""
+
+			background-color: #212121;
+
+			""")
+
+	# Left Mouse Clicked Event
+	def contextMenuEvent(self, event):
+		self.context_menu.exec(event.globalPos())
 
 
 class Other():

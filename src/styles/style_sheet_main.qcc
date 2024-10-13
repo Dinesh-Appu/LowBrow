@@ -15,6 +15,12 @@ QDialog {
 
 }
 
+
+QMenu{
+	background-color: #212121;
+	color : #ffffff;
+}
+
 QWebEngineView {
 	background-color : #313131;
 	color : #ffffff;
