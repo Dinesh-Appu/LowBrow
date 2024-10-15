@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
 		self.history = self.other.get_data("history")
 
 		# Status Bar
-		self.statusBar().showMessage(self.default_path)
+		#self.statusBar().showMessage(self.default_path)
 		#self.statusBar().addWidget(self.label)
 
 		# Main UI Setup
