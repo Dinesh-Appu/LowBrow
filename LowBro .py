@@ -392,11 +392,15 @@ class MainWindow(QMainWindow):
 			print(downlaod)
 
 	def coping_text(self):
-		text = self.req_url.toString()
-		# Text Selected 
+		text : str = ""
 
-		if text == "":
+		# Url and Text Selected is empty
+		if self.req_url.toString() == "" and self.browser_page.selectedText() == "":
+			text = self.browser_page.url().toString()
+		elif self.req_url.toString() == "" :
 			text = self.browser_page.selectedText()
+		else:
+			text = self.req_url.toString()
 		# by default Url
 		self.clipboard.setText(text, mode= self.clipboard.Clipboard)
 
