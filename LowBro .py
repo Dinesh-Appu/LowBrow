@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import ( QApplication, QMainWindow, QFileDialog,
 							)
 from PyQt5.QtCore import Qt, QUrl, QSize, QDir, QFileInfo
 from PyQt5.QtGui import QKeySequence, QIcon, QColor, QContextMenuEvent
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEngineDownloadItem
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 
 import PyQt5.QtCore as QtCore
 
@@ -59,14 +59,18 @@ class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
+
 		# Default Variables
+		# Browser 
 		self.ask_download = True
+		self.downlaoding_list : list = []
 		self.file_style_main = "./src/styles/style_sheet_main.qcc"
 		self.file_database = "./src/database.db"
 		self.default_path = "C:/Users/Welcome/Downloads/"
 		self.current_path = "C:/Users/Welcome/Downloads/"
 		self.default_page : str = "https://feathericons.com/?query="
 		self.default_page : QUrl = QUrl(self.default_page)
+		# Others
 		self.default_backgroud_color = "#282828"
 
 
@@ -81,6 +85,9 @@ class MainWindow(QMainWindow):
 		#"www.google.com"
 		#"file:///G:/Python/Files/PyQt5/test/temp/web/New%20Tab.htm"
 
+		# Label
+
+		# PushButton
 		self.btn_go = QPushButton()
 		self.btn_back = QPushButton()
 		self.btn_forward = QPushButton()
@@ -94,6 +101,9 @@ class MainWindow(QMainWindow):
 
 		self.spacer_home_to_edit = QPushButton()
 		self.spacer_book_to_download = QPushButton()
+
+		# Clipboard 
+		self.clipboard = QApplication.clipboard()
 
 		# Menus
 		self.context_menu = QMenu()
@@ -112,8 +122,16 @@ class MainWindow(QMainWindow):
 		self.browser = Browser()
 		
 		self.settings_browser = QWebEngineSettings.globalSettings()
+		self.browser_profile = QWebEngineProfile(f"storage-{1}", self.browser)
+		self.browser_page = QWebEnginePage(self.browser_profile, self.browser)
+		self.browser.setPage(self.browser_page)
 		self.other = Other(self)
 		self.history = self.other.get_data("history")
+
+		# Status Bar
+		self.statusBar().showMessage(self.default_path)
+		#self.statusBar().addWidget(self.label)
+
 		# Main UI Setup
 		self.initUI()
 
@@ -217,10 +235,11 @@ class MainWindow(QMainWindow):
 		self.browser.urlChanged.connect(self.url_changed)
 		self.browser.loadStarted.connect(self.url_loading)
 		self.browser.loadFinished.connect(self.url_loaded)
-		self.browser.page().linkHovered.connect(self.link_selected)
+		self.browser_page.linkHovered.connect(self.link_selected)
 
-		self.browser.page().fullScreenRequested.connect(self.full_screen_req)
-		QWebEngineProfile.defaultProfile().downloadRequested.connect(self.download_file)
+		# Request Signal Handler
+		self.browser_page.fullScreenRequested.connect(self.full_screen_req)
+		self.browser_profile.downloadRequested.connect(self.download_file)
 
 
 		#self.hbox_top.setAlignment(Qt.AlignTop)
@@ -242,12 +261,12 @@ class MainWindow(QMainWindow):
 		self.load_url()
 
 	def main_icon(self, url: QUrl = QUrl("www.google.com")):
-		print("\n{url}  Icon Url >>>>",self.browser.page().iconUrl())
+		print("\n{url}  Icon Url >>>>",self.browser_page.iconUrl())
 
 	def update_window(self):
-		self.setWindowTitle(self.browser.page().title())
-		self.setWindowIcon(self.browser.page().icon())
-		print("WIndow icon >>>>>",self.browser.page().iconUrl())
+		self.setWindowTitle(self.browser_page.title())
+		self.setWindowIcon(self.browser_page.icon())
+		print("WIndow icon >>>>>",self.browser_page.iconUrl())
 
 	def url_changed(self):
 		url = self.browser.url().toString()
@@ -279,12 +298,12 @@ class MainWindow(QMainWindow):
 		self.btn_refresh.setIcon(QIcon("./src/icon/refresh-cw_white.svg"))
 		self.update_window()
 
-		print(f"\n Title >>>> {self.browser.page().title()} \n")
+		print(f"\n Title >>>> {self.browser_page.title()} \n")
 		
-		print(f"Url Loaded {self.browser.page().icon()}")
-		self.browser_icon.setIcon(self.browser.page().icon())
-		print("###### back Color -----> ",self.browser.page().backgroundColor())
-		self.browser.page().setBackgroundColor(QColor(self.default_backgroud_color))
+		print(f"Url Loaded {self.browser_page.icon()}")
+		self.browser_icon.setIcon(self.browser_page.icon())
+		print("###### back Color -----> ",self.browser_page.backgroundColor())
+		self.browser_page.setBackgroundColor(QColor(self.default_backgroud_color))
 
 	def url_refresh_stop_stop(self):
 		if self.loading:
@@ -303,7 +322,7 @@ class MainWindow(QMainWindow):
 			print("add_bookmark >>>> ", value)
 
 	def show_menu(self):
-		self.req_url = self.browser.page().requestedUrl()
+		self.req_url = self.browser_page.requestedUrl()
 		book = self.other.get_data("bookmark")
 		print(f"get {self.req_url} bookmark >>>>> ", book)
 
@@ -331,16 +350,22 @@ class MainWindow(QMainWindow):
 		print(f"\n filesize = {downlaod.totalBytes()} default_path = {self.current_path} filetype = {downlaod.type()}\n")
 		# Start Downloading File
 		downlaod.accept()
-		print(" add download ===>",self.other.add_download(downlaod.url().toString(), path, int(datetime.datetime.now().timestamp()), "started", 0, 0))
+		
+		# Add in Downloading List
+		self.downlaoding_list.append(downlaod.path())
 		# Show Download Progress Signal
 		downlaod.downloadProgress.connect(self.download_progress)
-        
+		# Show Download Finished Signal
+		downlaod.finished.connect(lambda : self.download_finished(downlaod))
+		self.statusBar().showMessage(f"Downloading... {downlaod.path()}", 2000)
+		
 
 	def download_progress(self, recv_byte, total_byte):
 		
-		recv_byte = int((recv_byte/1024)/1024)
+		recv_byte = (recv_byte/1024)/1024
 		total_byte= int((total_byte/1024)/1024)
-		print(f"n Download Progress {recv_byte} Kb/{total_byte} Kb")
+		#if recv_byte == recv_byte
+		print(f"\n Download Progress {recv_byte} Mb/{total_byte} Mb")
 		"""# bytes to Mb
 		if int(total_byte/1024) > 1024:
 			print("is Mb") 
@@ -348,6 +373,17 @@ class MainWindow(QMainWindow):
 			print("is Kb")
 			recv_byte = int(recv_byte/1024)
 			total_byte= int(total_byte/1024) """
+
+	def download_finished(self, downlaod):
+		for x in range(len(self.downlaoding_list)):
+			if self.downlaoding_list[x] == downlaod.path():
+				self.statusBar().showMessage(f"File: {downlaod.path()} Downloaded Successfully ", 4000)
+				print(f"File: {downlaod.path()} Downloaded Successfully ")
+				self.downlaoding_list.pop(x)
+				break
+
+		print(" add download ===>",self.other.add_download(downlaod.url().toString(), downlaod.path(), int(datetime.datetime.now().timestamp()), "started", 0, 0))
+		
 		
 	def show_downloads(self):
 		downloads = self.other.get_data("downloads")
@@ -356,8 +392,17 @@ class MainWindow(QMainWindow):
 			print(downlaod)
 
 	def coping_text(self):
-		text = self.browser.page().selectedText()
-		print(f" {text} Coped:")
+		text = self.req_url.toString()
+		# Text Selected 
+
+		if text == "":
+			text = self.browser_page.selectedText()
+		# by default Url
+		self.clipboard.setText(text, mode= self.clipboard.Clipboard)
+
+		# Show Message(str:text, time:ms)
+		self.statusBar().showMessage(f"{text} is Copied", 2000)
+		#pyperclip.copy(text)
 
 	def link_selected(self, url):
 		print(f"Link Selected ---> _{url}_")
@@ -369,7 +414,7 @@ class MainWindow(QMainWindow):
 		if not str(self.req_url) == "PyQt5.QtCore.QUrl('')":
 			new.browser.setUrl(self.req_url)
 		else:
-			new.browser.setUrl(self.browser.page().requestedUrl())
+			new.browser.setUrl(self.browser_page.requestedUrl())
 		new.show()
 
 	@QtCore.pyqtSlot("QWebEngineFullScreenRequest")

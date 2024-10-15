@@ -7,6 +7,11 @@ QMainWindow {
 
 }
 
+QStatusBar{
+	background-color: #313131;
+	color: #ffffff;
+}
+
 QDialog {
 	background-color : #313131;
 	color : #ffffff;
