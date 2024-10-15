@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
 		self.file_database = "./src/database.db"
 		self.default_path = "C:/Users/Welcome/Downloads/"
 		self.current_path = "C:/Users/Welcome/Downloads/"
-		self.default_page : str = "https://feathericons.com/?query="
+		self.default_page : str = "https://www.youtube.com/watch?v=AiD6SOOBKZI"
 		self.default_page : QUrl = QUrl(self.default_page)
 		# Others
 		self.default_backgroud_color = "#282828"
@@ -78,8 +78,8 @@ class MainWindow(QMainWindow):
 		self.resize(900, 600)
 		self.style_sheet()
 
-		#"https://www.youtube.com/watch?v=AiD6SOOBKZI"
-		#"https://www.youtube.com/watch?v=IZHGcU0U_W0"
+		#"https://www.youtube.com/watch?v=AiD6SOOBKZI" Manasulayo song
+		#"https://www.youtube.com/watch?v=IZHGcU0U_W0" Matta SOng
 		#"https://feathericons.com/?query="
 		#"file:///G:/Python/Files/PyQt5/test/temp/roadmap_python.mp4"
 		#"www.google.com"
@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
 		self.other = Other(self)
 		self.history = self.other.get_data("history")
 
+		self.settings_browser = self.browser.settings()
 		# Status Bar
 		#self.statusBar().showMessage(self.default_path)
 		#self.statusBar().addWidget(self.label)
