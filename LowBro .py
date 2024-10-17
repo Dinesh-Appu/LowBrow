@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
 		self.file_database = "./src/database.db"
 		self.default_path = "C:/Users/Welcome/Downloads/"
 		self.current_path = "C:/Users/Welcome/Downloads/"
-		self.default_page : str = "https://www.youtube.com/watch?v=AiD6SOOBKZI"
+		self.default_page : str = "https://www.google.com/"
 		self.default_page : QUrl = QUrl(self.default_page)
 		# Others
 		self.default_backgroud_color = "#282828"
@@ -147,15 +147,27 @@ class MainWindow(QMainWindow):
 		self.action_new_window.setShortcut('Ctrl+n')
 		self.action_quit.setShortcut('ctrl+q')
 
+		# Action Icon
+		self.action_copy.setIcon(QIcon('./src/icon/clipboard_white.svg'))
+		self.action_save_as.setIcon(QIcon('./src/icon/save_white.svg'))
+		#self.action_new_window.setIcon(QIcon('./src/icon/.svg'))
+		#self.action_new_tab.setIcon(QIcon('./src/icon/clipboard_white.svg'))
+		self.action_quit.setIcon(QIcon('./src/icon/x_white.svg'))
+
+
+
 		self.context_menu.setStyleSheet("""
 				QMenu{
 					background-color: #212121;
 					color: #ffffff;
 					font-family: arial;
 					padding : 3px;
-					}
-				QMenu:chunk {
-				background-color : #515151;
+					border-style: solid;
+					border-color : #616161;
+					border-width : 1px;
+				}
+				QMenu:hover {
+				background-color : #ffffff;
 
 				}
 				""")

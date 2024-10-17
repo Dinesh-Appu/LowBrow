@@ -21,9 +21,13 @@ QDialog {
 }
 
 
-QMenu{
-	background-color: #212121;
+QMenu {
+	background-color: #312121;
 	color : #ffffff;
+	border-style: bold;
+	border-color : #414141;
+	border-width : 1xp;
+	border-radus : 2xp;
 }
 
 QWebEngineView {
