@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import ( QApplication, QMainWindow, QFileDialog,
 							QWidget, QHBoxLayout, QVBoxLayout,
-							QLabel, QLineEdit, QPushButton, QMenu
+							QLabel, QLineEdit, QPushButton, QProgressBar,
+							 QMenu, QWidgetAction
 							)
-from PyQt5.QtCore import Qt, QUrl, QSize, QDir, QFileInfo
-from PyQt5.QtGui import QKeySequence, QIcon, QColor, QContextMenuEvent
+from PyQt5.QtCore import Qt, QUrl, QSize, QDir, QFileInfo, QPoint
+from PyQt5.QtGui import QKeySequence, QIcon, QColor, QContextMenuEvent, QPixmap
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings, QWebEngineProfile, QWebEnginePage, QWebEngineDownloadItem
 
 import PyQt5.QtCore as QtCore
@@ -12,6 +13,8 @@ import PyQt5.QtCore as QtCore
 import sys 
 import sqlite3 
 import datetime
+# Own Module
+from QtRecyclerView import QRecyclerView
 
 
 """    Todo:
@@ -63,7 +66,7 @@ class MainWindow(QMainWindow):
 		# Default Variables
 		# Browser 
 		self.ask_download = True
-		self.downlaoding_list : list = []
+		self.downloading_list : list = []
 		self.file_style_main = "./src/styles/style_sheet_main.qcc"
 		self.file_database = "./src/database.db"
 		self.default_path = "C:/Users/Welcome/Downloads/"
@@ -102,6 +105,12 @@ class MainWindow(QMainWindow):
 		self.spacer_home_to_edit = QPushButton()
 		self.spacer_book_to_download = QPushButton()
 
+		# RecylerView
+		self.download_view = QRecyclerView()
+		self.download_action = QWidgetAction(None)
+		self.download_widget= QWidget()
+		self.download_menu = QMenu()
+
 		# Clipboard 
 		self.clipboard = QApplication.clipboard()
 
@@ -113,6 +122,7 @@ class MainWindow(QMainWindow):
 		self.action_new_window = self.context_menu.addAction("Open new Window")
 		self.action_new_tab = self.context_menu.addAction("Open New Tab")
 		self.action_quit = self.context_menu.addAction("Quit")
+		
 
 		self.edit_url = QLineEdit()
 
@@ -127,6 +137,7 @@ class MainWindow(QMainWindow):
 		self.browser.setPage(self.browser_page)
 		self.other = Other(self)
 		self.history = self.other.get_data("history")
+		#self.other.delete_tabel('downloads')
 
 		self.settings_browser = self.browser.settings()
 		# Status Bar
@@ -139,6 +150,9 @@ class MainWindow(QMainWindow):
 	def initUI(self):
 		self.main_centeral_widget = QWidget()
 		self.setCentralWidget(self.main_centeral_widget)
+
+		# Setting Download View
+		self.download_view.setLayoutSize(150, 60)
 
 		# Action Shortcuts
 		self.action_copy.setShortcut("ctrl+c")
@@ -340,37 +354,37 @@ class MainWindow(QMainWindow):
 		print(f"get {self.req_url} bookmark >>>>> ", book)
 
 	
-	def download_file(self, downlaod : QWebEngineDownloadItem):
+	def download_file(self, download : QWebEngineDownloadItem):
 
 		# Ask Before Download On
 		if self.ask_download:
 			# Ask where to save file
-			path, _ = QFileDialog.getSaveFileName(self, "Save as", self.current_path+downlaod.downloadFileName())
+			path, _ = QFileDialog.getSaveFileName(self, "Save as", self.current_path+download.downloadFileName())
 
 		# Ask Before Download Off
 		else:
 			# Save that on default path ex : C:/Users/Welcome/Downloads/ + ex.txt
-			path = self.default_path+str(downlaod.downloadFileName())
+			path = self.default_path+str(download.downloadFileName())
 		# Download Path is Null
 		if path == "":
 			return
 
 		# Set Download File Details
-		downlaod.setDownloadFileName(QFileInfo(path).fileName())
+		download.setDownloadFileName(QFileInfo(path).fileName())
 		self.current_path = QFileInfo(path).path()+"/"
-		downlaod.setDownloadDirectory(QFileInfo(path).path())
+		download.setDownloadDirectory(QFileInfo(path).path())
 
-		print(f"\n filesize = {downlaod.totalBytes()} default_path = {self.current_path} filetype = {downlaod.type()}\n")
+		print(f"\n filesize = {download.totalBytes()} default_path = {self.current_path} filetype = {download.type()}\n")
 		# Start Downloading File
-		downlaod.accept()
+		download.accept()
 		
 		# Add in Downloading List
-		self.downlaoding_list.append(downlaod.path())
+		self.downloading_list.append(download.path())
 		# Show Download Progress Signal
-		downlaod.downloadProgress.connect(self.download_progress)
+		download.downloadProgress.connect(self.download_progress)
 		# Show Download Finished Signal
-		downlaod.finished.connect(lambda : self.download_finished(downlaod))
-		self.statusBar().showMessage(f"Downloading... {downlaod.path()}", 2000)
+		download.finished.connect(lambda : self.download_finished(download))
+		self.statusBar().showMessage(f"Downloading... {download.path()}", 2000)
 		
 
 	def download_progress(self, recv_byte, total_byte):
@@ -387,22 +401,139 @@ class MainWindow(QMainWindow):
 			recv_byte = int(recv_byte/1024)
 			total_byte= int(total_byte/1024) """
 
-	def download_finished(self, downlaod):
-		for x in range(len(self.downlaoding_list)):
-			if self.downlaoding_list[x] == downlaod.path():
-				self.statusBar().showMessage(f"File: {downlaod.path()} Downloaded Successfully ", 4000)
-				print(f"File: {downlaod.path()} Downloaded Successfully ")
-				self.downlaoding_list.pop(x)
+	def download_finished(self, download):
+		for x in range(len(self.downloading_list)):
+			if self.downloading_list[x] == download.path():
+				self.statusBar().showMessage(f"File: {download.path()} Downloaded Successfully ", 4000)
+				print(f"File: {download.path()} Downloaded Successfully ")
+				self.downloading_list.pop(x)
 				break
 
-		print(" add download ===>",self.other.add_download(downlaod.url().toString(), downlaod.path(), int(datetime.datetime.now().timestamp()), "started", 0, 0))
+		print(" add download ===>",self.other.add_download(download.url().toString(), download.path(), int(datetime.datetime.now().timestamp()), "Finished", 0, 0))
 		
 		
 	def show_downloads(self):
 		downloads = self.other.get_data("downloads")
+		x = self.btn_download.pos().x()
+		y = self.btn_download.pos().y()
+		x-= 300
+		y+= 30
+		point = QWidget(self).mapToGlobal(QPoint(x,y))
+		print(f"x = {x} y = {y} Gpos = {point}")
+		
+		if downloads == []:
+			self.statusBar().showMessage("No Downloads", 6000)
+			return
+		self.download_view.clearView()
 
-		for downlaod in downloads:
-			print(downlaod)
+		for download in downloads:
+			id = download[0]
+			icon = "./src/icon/file_white.svg"
+			url = download[1]
+			path = download[2]
+			name = QFileInfo(path).fileName()
+			time = download[3]
+			state = download[4]
+			total_size = download[5]
+			down_size = download[6]
+			print(f"Id: {id} name: {name} path: {path} state = {state} url: {url} time: {time}")
+			self.download_view.addWidget(self.download_layout(id, icon, name, path, state))
+		# Show Recycler
+		self.download_view.view()
+
+		# Action Download 
+		self.download_action.setDefaultWidget(self.download_view)
+		self.download_menu.addAction(self.download_action)
+		# Show Downloads
+		self.download_menu.exec(point)
+
+
+
+	def download_layout(self, id:int, icon_p:str, name:str, path:str, states:str): # 
+			
+		widget = QWidget(self)
+		hbox = QHBoxLayout()
+		center = QVBoxLayout()
+		widget.setObjectName("main")
+		widget.setStyleSheet("""
+			QWidget#main:hover{
+			background-color: #616161;
+			}
+			QLabel{
+			background-color: #212121;
+			color: #ffffff;
+			text-align: center;
+			font-family: arial;
+			}
+			QPushButton{
+			background-color: #212121;
+			color: #ffffff;
+			}
+			QPushButton:hover{
+			background-color: #818181;
+			color: #ffffff;
+			}
+			
+
+			""")
+
+		file_icon = QLabel()
+		file_name = QLabel()
+		file_path = QLabel()
+		file_state = QPushButton()
+		file_progress = QProgressBar()
+
+		file_icon.setPixmap(QPixmap(icon_p))
+		file_icon.setFixedWidth(40)
+		file_name.setText(name)
+		file_progress.setMaximum(100)
+		file_path.setText(path)
+
+		match states:
+			case "Finished":
+				state = "./src/icon/folder_white.svg"
+			case "Progress":
+				state = "./src/icon/pause_white.svg"
+			case "Paused":
+				state = "./src/icon/play_white.svg"
+			case "Canceled":
+				state = "./src/icon/refresh-cw_white.svg"
+
+		file_state.setIcon(QIcon(state))
+		file_state.setIconSize(QSize(20, 20))
+		file_state.setFixedHeight(32)
+		file_state.setFixedWidth(32)
+		file_state.clicked.connect( lambda: self.act_download(id,states,widget,path)) #open_file_location
+
+		center.addWidget(file_name)
+		if states == "Progress" :
+			file_progress.setValue(50)
+			file_progress.setStyleSheet("QProgressBar{ text-align : center; }")
+			center.addWidget(file_progress)
+		elif states == "Paused":
+			file_progress.setValue(50)
+			file_progress.setStyleSheet("QProgressBar{ background-color : red ;text-align : center; }QProgressBar:chunk{ background-color : orange;}")
+			center.addWidget(file_progress)
+		center.addWidget(file_path)
+		hbox.addWidget(file_icon)
+		hbox.addLayout(center)
+		hbox.addWidget(file_state)
+		widget.setLayout(hbox)
+		#widget.setStyleSheet("background-color: #919191")
+		widget.resize(450, 70)
+		return widget
+
+	def act_download(self, id, state, obj, path):
+		match state:
+			case "Progress":
+				self.statusBar().showMessage(f"Download File: {path} is Paused", 4000)
+			case "Paused":
+				self.statusBar().showMessage(f"Download File: {path} is Resumed", 4000)
+			case "Canceled":
+				self.statusBar().showMessage(f"Download File: {path} is Restarted", 4000)
+			case "Finished":
+				self.statusBar().showMessage(f"Opening File: {path}", 4000)
+
 
 	def coping_text(self):
 		text : str = ""
@@ -497,7 +628,7 @@ class Other():
 								url STRING NOT NULL, 
 								path STRING NOT NULL UNIQUE,
 								time TIMESTAMP NOT NULL,
-								state STRING DEFAULT "progress",
+								state STRING DEFAULT "Progress",
 								t_size int DEFAULT 0,
 								c_size int DEFAULT 0 )
 		""")
@@ -519,6 +650,7 @@ class Other():
 		try:
 			self.cursor.execute(""" INSERT INTO downloads (url, path, state, time, t_size, c_size) 
 								VALUES ("{}", "{}", "{}", {}, {}, {})""".format(url, path, state, time, total_size, current_size))
+			self.db.commit()
 			return "Success"
 		except Exception as e:
 			return str(e)
@@ -545,6 +677,8 @@ class Other():
 	def update_data(self, tabel_name: str, id: int, url : str) -> str:
 		try:
 			self.cursor.execute(""" UPDATE {} SET url = {} WHERE id = {} ;""".format(tabel_name, url, id))
+			self.db.commit()
+			return "Success"
 		except Exception as e:
 			return str(e)
 
@@ -552,8 +686,17 @@ class Other():
 	def delete_data(self,tabel_name: str,id) -> str:
 		try:
 			self.cursor.execute("DELETE FROM {} WHERE id = {}".format(tabel_name, id))
+			self.db.commit()
 			return "Success"
 		except Exception as e:
+			return str(e)
+
+	def delete_tabel(self, tabel_name:str) -> str:
+		try :
+			self.cursor.execute("DROP TABLE IF EXISTS {} ".format(tabel_name))
+			self.db.commit()
+			return "Success"
+		except Exception as e :
 			return str(e)
 
 if __name__ == "__main__":
