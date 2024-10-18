@@ -15,6 +15,7 @@ import sqlite3
 import datetime
 # Own Module
 from QtRecyclerView import QRecyclerView
+from Layouts import DownloadLayout
 
 
 """    Todo:
@@ -306,6 +307,14 @@ class MainWindow(QMainWindow):
 	def load_url(self,url : str =""):
 		if url == "":
 			url = self.default_page
+			url = url.toString()
+		
+		if not url == "https://www.google.com/" or url == "www.google.com":
+			if not url.startswith("www.") or not url.endswith(".com"):
+				url = url.replace(" ","+")
+				url = f"https://www.google.com/search?q={url}" 
+		#https://www.google.com/search?q=pyqtsignal+pyside6
+
 		q_url = QUrl(url)
 		if not q_url.scheme():
 			q_url.setScheme("https")
@@ -416,7 +425,7 @@ class MainWindow(QMainWindow):
 		downloads = self.other.get_data("downloads")
 		x = self.btn_download.pos().x()
 		y = self.btn_download.pos().y()
-		x-= 300
+		x-= 330
 		y+= 30
 		point = QWidget(self).mapToGlobal(QPoint(x,y))
 		print(f"x = {x} y = {y} Gpos = {point}")
@@ -437,7 +446,10 @@ class MainWindow(QMainWindow):
 			total_size = download[5]
 			down_size = download[6]
 			print(f"Id: {id} name: {name} path: {path} state = {state} url: {url} time: {time}")
-			self.download_view.addWidget(self.download_layout(id, icon, name, path, state))
+			layout = DownloadLayout(self)
+
+			#layout.file_state.clicked.connect( lambda: self.act_download(id,states,widget,path)) #open_file_location
+			self.download_view.addWidget(self.download_layout(id, icon, name, path, state, total_size, down_size))
 		# Show Recycler
 		self.download_view.view()
 
@@ -447,13 +459,26 @@ class MainWindow(QMainWindow):
 		# Show Downloads
 		self.download_menu.exec(point)
 
-
-
-	def download_layout(self, id:int, icon_p:str, name:str, path:str, states:str): # 
-			
-		widget = QWidget(self)
+	def download_layout(self , id:int, icon_p:str, name:str, path:str, states:str, t_size, d_size):
+		# Layouts
+		widget = QWidget()
 		hbox = QHBoxLayout()
-		center = QVBoxLayout()
+		midbox = QVBoxLayout()
+		ps_box = QHBoxLayout()
+
+		# Inner Objects
+		file_icon = QLabel()
+		file_name = QLabel()
+		file_path = QLabel()
+		file_size = QLabel()
+		file_state = QPushButton()
+		file_progress = QProgressBar()
+
+		if d_size == 0:
+			total_size = f"{t_size}Mb"
+		else:
+			total_size = f"{d_size}Mb/{t_size}Mb"
+
 		widget.setObjectName("main")
 		widget.setStyleSheet("""
 			QWidget#main:hover{
@@ -477,17 +502,13 @@ class MainWindow(QMainWindow):
 
 			""")
 
-		file_icon = QLabel()
-		file_name = QLabel()
-		file_path = QLabel()
-		file_state = QPushButton()
-		file_progress = QProgressBar()
-
 		file_icon.setPixmap(QPixmap(icon_p))
 		file_icon.setFixedWidth(40)
 		file_name.setText(name)
 		file_progress.setMaximum(100)
 		file_path.setText(path)
+		file_size.setText(total_size)
+		print("Lays")
 
 		match states:
 			case "Finished":
@@ -503,26 +524,32 @@ class MainWindow(QMainWindow):
 		file_state.setIconSize(QSize(20, 20))
 		file_state.setFixedHeight(32)
 		file_state.setFixedWidth(32)
-		file_state.clicked.connect( lambda: self.act_download(id,states,widget,path)) #open_file_location
+		file_state.clicked.connect( lambda: act_download(id,states,widget,path)) #open_file_location
 
-		center.addWidget(file_name)
+		midbox.addWidget(file_name)
+		print("LA")
 		if states == "Progress" :
 			file_progress.setValue(50)
 			file_progress.setStyleSheet("QProgressBar{ text-align : center; }")
-			center.addWidget(file_progress)
+			midbox.addWidget(file_progress)
 		elif states == "Paused":
 			file_progress.setValue(50)
 			file_progress.setStyleSheet("QProgressBar{ background-color : red ;text-align : center; }QProgressBar:chunk{ background-color : orange;}")
-			center.addWidget(file_progress)
-		center.addWidget(file_path)
+			midbox.addWidget(file_progress)
+		ps_box.addWidget(file_path)
+		ps_box.addStretch()
+		ps_box.addWidget(file_size)
+		midbox.addLayout(ps_box)
 		hbox.addWidget(file_icon)
-		hbox.addLayout(center)
+		hbox.addLayout(midbox)
 		hbox.addWidget(file_state)
 		widget.setLayout(hbox)
 		#widget.setStyleSheet("background-color: #919191")
 		widget.resize(450, 70)
 		return widget
 
+
+	
 	def act_download(self, id, state, obj, path):
 		match state:
 			case "Progress":
